@@ -1,0 +1,6 @@
+# Ignorera allt
+*
+
+# Utom artikeln
+!FROM_SCRATCH.md
+!.gitignore
