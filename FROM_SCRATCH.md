@@ -301,7 +301,7 @@ npm install -D concurrently
 
 ```json
 "scripts": {
-  "start": "concurrently -n backend,vite -c yellow,blue \"npm:backend\" \"npm:dev\"", 
+  "start": "concurrently -n backend,vite npm:backend npm:dev",
   "dev": "vite",
   "backend": "dotnet run --project backend/App",
   "build": "tsc -b && vite build",
@@ -322,7 +322,11 @@ npm install -D concurrently
 >
 > **Vad gör `-n backend,vite`?**
 >
-> Flaggan namnger processerna. I terminalen syns varje rad prefixad med `[backend]` eller `[vite]` så man ser vad som kommer varifrån. (Vi kan även ge olika färger till namnen som skrivs ut med växeln -c.)
+> Flaggan namnger processerna. I terminalen syns varje rad prefixad med `[backend]` eller `[vite]` så man ser vad som kommer varifrån.
+>
+> **Vad är `npm:backend`?**
+>
+> Det är concurrently:s shorthand för `npm run backend`. Fördelen: inga citattecken behövs — det undviker problem med att olika terminaler (cmd.exe, PowerShell, bash) tolkar escaped quotes olika.
 
 ### 3.6 Testa att allt fungerar
 
@@ -809,7 +813,7 @@ Nu har vi alla testtyper på plats. Här är hela `scripts`-sektionen i `package
 
 ```json
 "scripts": {
-  "start": "concurrently -n backend,vite \"npm:backend\" \"npm:dev\"",
+  "start": "concurrently -n backend,vite npm:backend npm:dev",
   "dev": "vite",
   "backend": "dotnet run --project backend/App",
   "test": "npm run test:xunit && npm run test:api && npm run test:vitest && npm run test:e2e",
