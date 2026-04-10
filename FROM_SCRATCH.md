@@ -514,9 +514,13 @@ npm install -D post-they newman
 
 ### 5.2 Skapa teststrukturen
 
+Vi skapar mappstrukturen manuellt här eftersom vi bara behöver två enkla requests. 
+
 ```bash
 mkdir -p api-tests/requests
 ```
+
+> **Tips:** post-they har ett `init`-kommando (`post-they init api-tests`) som scaffoldar ett komplett CRUD-exempel med looping, testdata och hjälpfunktioner. Kör det gärna i en separat mapp om du vill se ett mer avancerat exempel!
 
 ### 5.3 Skapa collection-filen
 
@@ -585,7 +589,15 @@ export function postResponse() {
 > - `{{baseUrl}}` ersätts med variabeln vi satte i `preRequest()`
 > - **Undvik variabelnamnet `data`** i `postResponse()` — det är reserverat av post-they för looping-funktionalitet
 
-### 5.5 Kör API-testerna
+### 5.5 Lägg till npm-script
+
+Lägg till ett `test:api`-script i `package.json`:
+
+```json
+"test:api": "post-they run api-tests"
+```
+
+### 5.6 Kör API-testerna
 
 Starta backenden i en terminal:
 
@@ -727,7 +739,17 @@ Then('ska jag se texten {string}', async ({ page }, text) => {
 > - Varje step tar emot Playwright-fixtures (t.ex. `page`) och eventuella parametrar från feature-filen (`{string}`)
 > - Vi använder Playwrights inbyggda `expect` för assertions
 
-### 6.6 Kör E2E-testerna
+### 6.6 Lägg till npm-script
+
+Lägg till ett `test:e2e`-script i `package.json`:
+
+```json
+"test:e2e": "npx bddgen && npx playwright test"
+```
+
+> `bddgen` genererar Playwright-testfiler från `.feature`-filerna. Det måste köras innan `playwright test`.
+
+### 6.7 Kör E2E-testerna
 
 E2E-testerna kräver att **både backend och frontend kör** (de testar i webbläsaren via Vite-proxyn):
 
