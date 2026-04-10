@@ -478,7 +478,15 @@ public class GreeterTest
 > - **`Assert.Equal(expected, actual)`** — kontrollera att värdet stämmer
 > - **`Assert.Throws<T>()`** — kontrollera att rätt exception kastas
 
-### 4.4 Kör testerna
+### 4.4 Lägg till npm-script
+
+Lägg till ett `test:xunit`-script i `package.json`:
+
+```json
+"test:xunit": "dotnet test backend/MyApp.slnx"
+```
+
+### 4.5 Kör testerna
 
 ```bash
 npm run test:xunit
