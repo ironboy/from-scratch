@@ -983,3 +983,35 @@ Både Playwright och ViTest kan testa att "användaren ser rätt sak på skärme
 **Tumregel:** Använd ViTest för att snabbt verifiera att enskilda komponenter beter sig rätt — speciellt de med enkel webbläsarinteraktion. Använd Playwright för att verifiera att allt fungerar ihop, och för komponenter med komplex webbläsarlogik där mockningsarbetet inte är värt besväret.
 
 De *överlappar* delvis — och det är okej. Det är bättre att ha två tester som fångar samma bugg från olika håll än att ha en blind fläck som ingen testar alls.
+
+---
+
+## Kör alla tester
+
+Nu har vi alla delar på plats. Så här kör du allt:
+
+```bash
+# Terminal 1 — starta backend + frontend
+npm start
+
+# Terminal 2 — kör alla tester
+npm test
+```
+
+`npm test` (liksom `npm start`) är ett inbyggt npm-script — du behöver inte skriva `run`. Det kör alla testtyper i sekvens:
+
+1. **xUnit** — enhetstester mot C#-klasser (kräver inte servrarna)
+2. **post-they** — API-tester mot backenden
+3. **ViTest** — komponenttester med mockad DOM (kräver inte servrarna)
+4. **Playwright** — E2E-tester i riktig webbläsare
+
+Om ett steg misslyckas avbryts kedjan (`&&`) — du ser direkt var felet är.
+
+Du kan även köra varje typ individuellt:
+
+```bash
+npm run test:xunit    # bara C#-enhetstester
+npm run test:api      # bara API-tester
+npm run test:vitest   # bara komponenttester
+npm run test:e2e      # bara E2E-tester
+```
