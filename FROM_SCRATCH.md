@@ -76,7 +76,7 @@ git clone <repo-url>
 cd projektnamn
 npm install
 dotnet restore backend/MyApp.slnx
-npm run dev
+npm start
 ```
 
 Fem kommandon. Klart. Inga manuella steg, ingen dokumentation att missa.
