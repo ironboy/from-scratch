@@ -959,7 +959,7 @@ De *överlappar* delvis — och det är okej. Det är bättre att ha två tester
 Lägg till ett `test`-script i `package.json` som kör alla testtyper i sekvens:
 
 ```json
-"test": "npm run test:xunit && npm run test:api && npm run test:vitest && npm run test:e2e"
+"test": "npm run test:xunit && npm run test:api && npm run test:e2e && npm run test:vitest"
 ```
 
 Starta backend + frontend i en terminal, kör testerna i en annan:
