@@ -99,6 +99,8 @@ Vi använder `.` (punkt) för att säga "skapa det *här*, i mappen jag redan st
 > - `.` — skapa i nuvarande mapp (istället för en ny undermapp)
 > - `-- --template react-ts` — hoppa över den interaktiva menyn, välj React + TypeScript direkt
 
+Du kan få en fråga om package name - om du har namngett din mapp med bara *A-Z, a-z, 0-9, _ och -* så bör Vite räkna ut ett föreslaget package-name utifrån mapp-namnet och tryck då bara ENTER för att bekräfta.
+
 Du får fortfarande en fråga *"Install with npm and start now?"*. Du kan svara ja för att få till npm-installation av nödvändiga paket för Vite+React+TS, men sedan stänga ned servern direkt med *Ctrl+C*.
 
 ### Vad fick vi?
