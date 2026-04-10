@@ -962,7 +962,7 @@ Lägg till ett `test`-script i `package.json` som kör alla testtyper i sekvens:
 "test": "npm run test:xunit && npm run test:api && npm run test:e2e && npm run test:vitest"
 ```
 
-**Notera:** Om en testtyp fallerar när vi kör **npm test** så körs inte övriga när ni har "&&" - då att gå vidare kedjan kräver **exit code 0** (inga fel) när man använder "&&". Ett alternativ till "&&" vore ";" som alltid går vidare, men då får ni inga felkod från **npm test** även om en eller flera testtyper fallerar.
+**Notera:** Om en testtyp fallerar när vi kör **npm test** så körs inte övriga när ni har "&&" - då att gå vidare kedjan kräver **exit code 0** (inga fel) när man använder "&&". Ett alternativ till "&&" vore ";" som alltid går vidare, men då får ni inga felkod från **npm test** även om en eller flera testtyper fallerar. Du kan fortfarande se i testrapporteringen om tester fallerar men om du använder **npm test** som en del i en CI/CD-pipeline kommer den att tolka exit code 0 som att alla tester gick igenom.
 
 Starta backend + frontend i en terminal, kör testerna i en annan:
 
