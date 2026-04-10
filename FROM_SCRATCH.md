@@ -729,6 +729,8 @@ Feature: Smoke-test
 
 > **Gherkin** är ett sätt att beskriva beteende i nästan naturligt språk. Varje `Given`/`When`/`Then`-rad kopplas till en JavaScript-funktion (en "step definition").
 
+**Tips:** För syntax-highlighting och viss linting av Gherkin/feature filer installera VSC-kod tillägget **Cucumber**.
+
 ### 6.5 Skriv step-definitioner
 
 Skapa `e2e/steps/smoke.steps.js`:
