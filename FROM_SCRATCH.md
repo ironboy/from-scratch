@@ -384,3 +384,390 @@ export default function App() {
 
 }
 ```
+
+---
+
+## Steg 4: Enhetstester med xUnit
+
+Vi har redan ett testprojekt (`backend/App.Tests/`) kopplat till vår backend via en project reference. Nu lägger vi till något att testa.
+
+### 4.1 Skapa en klass att testa
+
+Skapa filen `backend/App/Greeter.cs`:
+
+```csharp
+public class Greeter
+{
+    public string Greet(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name cannot be empty");
+
+        return $"Hello, {name}!";
+    }
+}
+```
+
+### 4.2 Använd den i en ny route
+
+Uppdatera `backend/App/Program.cs` — lägg till en route som använder `Greeter`:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+var greeter = new Greeter();
+
+app.MapGet("/api/hello", () => new { message = "Hello from .NET!" });
+app.MapGet("/api/greet/{name}", (string name) => new { message = greeter.Greet(name) });
+
+app.Run();
+```
+
+Testa den nya routen:
+
+```bash
+npm run backend
+# I en annan terminal:
+curl http://localhost:5001/api/greet/Anna
+# → {"message":"Hello, Anna!"}
+```
+
+### 4.3 Skriv testerna
+
+Ersätt innehållet i `backend/App.Tests/UnitTest1.cs` (eller skapa en ny fil `GreeterTest.cs` och ta bort `UnitTest1.cs`):
+
+```csharp
+namespace App.Tests;
+
+public class GreeterTest
+{
+    private readonly Greeter _greeter = new();
+
+    [Fact]
+    public void Greet_ReturnsGreetingWithName()
+    {
+        var result = _greeter.Greet("Anna");
+        Assert.Equal("Hello, Anna!", result);
+    }
+
+    [Theory]
+    [InlineData("Erik", "Hello, Erik!")]
+    [InlineData("Maria", "Hello, Maria!")]
+    public void Greet_WorksWithDifferentNames(string name, string expected)
+    {
+        var result = _greeter.Greet(name);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void Greet_ThrowsOnEmptyName(string? name)
+    {
+        Assert.Throws<ArgumentException>(() => _greeter.Greet(name!));
+    }
+}
+```
+
+> **xUnit-begrepp:**
+>
+> - **`[Fact]`** — ett enskilt test, körs en gång
+> - **`[Theory]` + `[InlineData]`** — samma test körs med olika data (parametriserat test)
+> - **`Assert.Equal(expected, actual)`** — kontrollera att värdet stämmer
+> - **`Assert.Throws<T>()`** — kontrollera att rätt exception kastas
+
+### 4.4 Kör testerna
+
+```bash
+npm run test:xunit
+```
+
+Du bör se:
+
+```
+Passed!  - Failed: 0, Passed: 7, Skipped: 0, Total: 7
+```
+
+---
+
+## Steg 5: API-tester med post-they
+
+Nu testar vi våra REST-endpoints utifrån — som en riktig klient skulle göra det. Vi använder **post-they** som låter oss skriva Postman-tester som vanliga JavaScript-filer i VS Code, utan att behöva öppna Postman.
+
+### 5.1 Installera post-they och Newman
+
+```bash
+npm install -D post-they newman
+```
+
+> **post-they** kompilerar våra testfiler till en Postman collection som sedan körs med **Newman** (Postman:s CLI-runner).
+
+### 5.2 Skapa teststrukturen
+
+```bash
+mkdir -p api-tests/requests
+```
+
+### 5.3 Skapa collection-filen
+
+Skapa `api-tests/collection.js` — den definierar vilka tester som ska köras och i vilken ordning:
+
+```javascript
+import getHello from './requests/get-hello.js';
+import greetName from './requests/greet-name.js';
+
+export const name = 'FromScratchAPI';
+
+export function preRequest() {
+  pm.variables.set('baseUrl', 'http://localhost:5001');
+}
+
+export const order = [
+  getHello,
+  greetName
+];
+```
+
+> `preRequest()` körs före varje request — här sätter vi `baseUrl` så vi slipper upprepa den i varje testfil.
+
+### 5.4 Skapa testfilerna
+
+Skapa `api-tests/requests/get-hello.js`:
+
+```javascript
+export default {
+  method: 'GET',
+  url: '{{baseUrl}}/api/hello'
+};
+
+export function postResponse() {
+  pm.test('Status code is 200', () => pm.response.to.have.status(200));
+
+  const json = pm.response.json();
+  pm.test('Response has message field', () =>
+    pm.expect(json.message).to.equal('Hello from .NET!')
+  );
+}
+```
+
+Skapa `api-tests/requests/greet-name.js`:
+
+```javascript
+export default {
+  method: 'GET',
+  url: '{{baseUrl}}/api/greet/Anna'
+};
+
+export function postResponse() {
+  pm.test('Status code is 200', () => pm.response.to.have.status(200));
+
+  const json = pm.response.json();
+  pm.test('Greeting contains name', () =>
+    pm.expect(json.message).to.equal('Hello, Anna!')
+  );
+}
+```
+
+> **post-they-mönstret:**
+>
+> - Varje request-fil exporterar ett **default-objekt** med `method` och `url`
+> - `postResponse()` körs efter att svaret kommit — här skriver vi våra assertions
+> - `{{baseUrl}}` ersätts med variabeln vi satte i `preRequest()`
+> - **Undvik variabelnamnet `data`** i `postResponse()` — det är reserverat av post-they för looping-funktionalitet
+
+### 5.5 Kör API-testerna
+
+Starta backenden i en terminal:
+
+```bash
+npm run backend
+```
+
+Kör testerna i en annan terminal:
+
+```bash
+npm run test:api
+```
+
+> **Obs:** API-testerna kräver att backenden kör! De testar mot det riktiga API:et.
+
+Du bör se:
+
+```
+→ Get Hello
+  GET http://localhost:5001/api/hello [200 OK]
+  ✓  Status code is 200
+  ✓  Response has message field
+
+→ Greet Name
+  GET http://localhost:5001/api/greet/Anna [200 OK]
+  ✓  Status code is 200
+  ✓  Greeting contains name
+```
+
+---
+
+## Steg 6: E2E-tester med Playwright + BDD
+
+Nu sätter vi upp end-to-end-tester som kör i en riktig webbläsare. Vi använder **Playwright** tillsammans med **playwright-bdd** som låter oss skriva tester i **Gherkin-format** (`.feature`-filer) — ett sätt att beskriva tester på nästan vanlig svenska.
+
+### 6.1 Installera Playwright och BDD-stöd
+
+```bash
+npm install -D @playwright/test playwright-bdd
+npx playwright install chromium
+```
+
+> `npx playwright install chromium` laddar ner en Chromium-webbläsare som Playwright styr. Du behöver bara göra detta en gång.
+
+### 6.2 Skapa mappstrukturen
+
+```bash
+mkdir -p e2e/features e2e/steps
+```
+
+### 6.3 Konfigurera Playwright
+
+Skapa `playwright.config.js` i projektroten:
+
+```javascript
+import { defineConfig, devices } from '@playwright/test';
+import { defineBddConfig } from 'playwright-bdd';
+
+const testDir = defineBddConfig({
+  features: 'e2e/features/**/*.feature',
+  steps: 'e2e/steps/**/*.js',
+  outputDir: '.features-gen'
+});
+
+export default defineConfig({
+  testDir,
+  timeout: 30_000,
+  expect: {
+    timeout: 10_000
+  },
+  reporter: [['list']],
+  use: {
+    baseURL: 'http://localhost:5173',
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure'
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] }
+    }
+  ]
+});
+```
+
+> **Vad gör `defineBddConfig`?**
+>
+> Den kopplar ihop `.feature`-filer med step-definitioner och genererar Playwright-testfiler automatiskt (i `.features-gen/`). Playwright kör sedan dessa genererade filer.
+
+### 6.4 Skriv en feature-fil
+
+Skapa `e2e/features/smoke.feature`:
+
+```gherkin
+Feature: Smoke-test
+
+    Scenario: Startsidan går att öppna
+        Given att jag öppnar startsidan
+        Then ska jag se en rubrik på sidan
+
+    Scenario: API:et svarar via proxyn
+        Given att jag öppnar "/api/hello" i webbläsaren
+        Then ska jag se texten "Hello from .NET!"
+```
+
+> **Gherkin** är ett sätt att beskriva beteende i nästan naturligt språk. Varje `Given`/`When`/`Then`-rad kopplas till en JavaScript-funktion (en "step definition").
+
+### 6.5 Skriv step-definitioner
+
+Skapa `e2e/steps/smoke.steps.js`:
+
+```javascript
+import { expect } from '@playwright/test';
+import { createBdd } from 'playwright-bdd';
+
+const { Given, Then } = createBdd();
+
+Given('att jag öppnar startsidan', async ({ page }) => {
+  await page.goto('/');
+});
+
+Given('att jag öppnar {string} i webbläsaren', async ({ page }, path) => {
+  await page.goto(path);
+});
+
+Then('ska jag se en rubrik på sidan', async ({ page }) => {
+  const heading = page.locator('h1');
+  await expect(heading).toBeVisible();
+});
+
+Then('ska jag se texten {string}', async ({ page }, text) => {
+  await expect(page.locator('body')).toContainText(text);
+});
+```
+
+> **Mönstret:**
+>
+> - `createBdd()` ger oss `Given`, `When`, `Then`-funktioner
+> - Varje step tar emot Playwright-fixtures (t.ex. `page`) och eventuella parametrar från feature-filen (`{string}`)
+> - Vi använder Playwrights inbyggda `expect` för assertions
+
+### 6.6 Kör E2E-testerna
+
+E2E-testerna kräver att **både backend och frontend kör** (de testar i webbläsaren via Vite-proxyn):
+
+```bash
+# Terminal 1:
+npm start
+
+# Terminal 2:
+npm run test:e2e
+```
+
+Du bör se:
+
+```
+  ✓  [chromium] › Smoke-test › Startsidan går att öppna
+  ✓  [chromium] › Smoke-test › API:et svarar via proxyn
+
+  2 passed
+```
+
+---
+
+## Steg 7: npm-scripts — kör alla tester
+
+Nu har vi alla testtyper på plats. Här är hela `scripts`-sektionen i `package.json`:
+
+```json
+"scripts": {
+  "start": "concurrently -n backend,vite \"npm run backend\" \"npm run dev\"",
+  "dev": "vite",
+  "backend": "dotnet run --project backend/App",
+  "test": "npm run test:xunit && npm run test:api && npm run test:vitest && npm run test:e2e",
+  "test:xunit": "dotnet test backend/MyApp.slnx",
+  "test:api": "post-they run api-tests",
+  "test:e2e": "npx bddgen && npx playwright test",
+  "test:vitest": "echo \"ViTest — konfigureras i nästa steg\"",
+  "build": "tsc -b && vite build",
+  "lint": "eslint .",
+  "preview": "vite preview"
+}
+```
+
+| Script | Vad det kör | Kräver att servrarna kör? |
+|--------|-------------|--------------------------|
+| `npm run test:xunit` | xUnit enhetstester | Nej |
+| `npm run test:api` | post-they API-tester | Ja — backenden |
+| `npm run test:e2e` | Playwright BDD-tester | Ja — backend + frontend |
+| `npm run test:vitest` | ViTest (kommer i steg 8) | Nej |
+| `npm test` | Alla ovanstående i sekvens | Ja |
+
+> **Obs:** `npm run test:xunit` och (kommande) `npm run test:vitest` kan köras utan att starta servrarna — de är rena enhetstester. API- och E2E-tester kräver däremot att backend (och för E2E även frontend) kör. Starta dem med `npm start` i en separat terminal innan du kör `npm test`.
