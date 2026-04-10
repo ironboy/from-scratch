@@ -504,13 +504,15 @@ Passed!  - Failed: 0, Passed: 7, Skipped: 0, Total: 7
 
 Nu testar vi våra REST-endpoints utifrån — som en riktig klient skulle göra det. Vi använder **post-they** som låter oss skriva Postman-tester som vanliga JavaScript-filer i VS Code, utan att behöva öppna Postman.
 
-### 5.1 Installera post-they och Newman
+### 5.1 Installera post-they
 
 ```bash
-npm install -D post-they newman
+npm install -D post-they
 ```
 
-> **post-they** kompilerar våra testfiler till en Postman collection som sedan körs med **Newman** (Postman:s CLI-runner).
+> **post-they** kompilerar våra testfiler till en Postman collection som sedan körs med **Newman** (Postman:s CLI-runner). Newman ingår som dependency i post-they, så vi behöver inte installera det separat.
+>
+> **Notera:** Du kommer troligtvis se varningar från `npm audit` efter installationen. Dessa kommer från Newmans interna beroenden (lodash, handlebars, underscore m.fl.) som inte har uppdaterats till säkra versioner. Det påverkar inte säkerheten i ditt projekt — det är testverktyg som bara körs lokalt, aldrig i produktion.
 
 ### 5.2 Skapa teststrukturen
 
@@ -626,6 +628,28 @@ Du bör se:
   ✓  Status code is 200
   ✓  Greeting contains name
 ```
+
+> **Alternativ utan post-they — Newman direkt med exporterade collections**
+>
+> Om du föredrar att skriva tester i Postman och exportera som JSON kan du använda Newman direkt:
+>
+> ```bash
+> npm install -D newman
+> ```
+>
+> Lägg den exporterade `.json`-filen i `api-tests/` och peka på den i ditt npm-script:
+>
+> ```json
+> "test:api": "newman run api-tests/my-collection.json"
+> ```
+>
+> Har du flera collections, kedja dem:
+>
+> ```json
+> "test:api": "newman run api-tests/users.json && newman run api-tests/products.json"
+> ```
+>
+> **Obs:** Använd inte glob-mönster (`api-tests/*.json`) — det fungerar inte i Windows cmd.exe. Peka alltid på specifika filer.
 
 ---
 
@@ -785,7 +809,7 @@ Nu har vi alla testtyper på plats. Här är hela `scripts`-sektionen i `package
   "test:xunit": "dotnet test backend/MyApp.slnx",
   "test:api": "post-they run api-tests",
   "test:e2e": "npx bddgen && npx playwright test",
-  "test:vitest": "echo \"ViTest — konfigureras i nästa steg\"",
+  "test:vitest": "vitest run",
   "build": "tsc -b && vite build",
   "lint": "eslint .",
   "preview": "vite preview"
@@ -797,7 +821,154 @@ Nu har vi alla testtyper på plats. Här är hela `scripts`-sektionen i `package
 | `npm run test:xunit` | xUnit enhetstester | Nej |
 | `npm run test:api` | post-they API-tester | Ja — backenden |
 | `npm run test:e2e` | Playwright BDD-tester | Ja — backend + frontend |
-| `npm run test:vitest` | ViTest (kommer i steg 8) | Nej |
+| `npm run test:vitest` | ViTest komponenttester | Nej |
 | `npm test` | Alla ovanstående i sekvens | Ja |
 
-> **Obs:** `npm run test:xunit` och (kommande) `npm run test:vitest` kan köras utan att starta servrarna — de är rena enhetstester. API- och E2E-tester kräver däremot att backend (och för E2E även frontend) kör. Starta dem med `npm start` i en separat terminal innan du kör `npm test`.
+> **Obs:** `npm run test:xunit` och `npm run test:vitest` kan köras utan att starta servrarna — de är rena enhetstester. API- och E2E-tester kräver däremot att backend (och för E2E även frontend) kör. Starta dem med `npm start` i en separat terminal innan du kör `npm test`.
+
+---
+
+## Steg 8: Komponenttester med ViTest
+
+Nu testar vi React-komponenter. Problemet: våra komponenter renderar till en DOM — men Node.js har ingen DOM. Vi behöver **jsdom**, ett bibliotek som simulerar en webbläsarens DOM i Node.
+
+### 8.1 Installera ViTest och testbibliotek
+
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
+```
+
+| Paket | Vad det gör |
+|-------|-------------|
+| `vitest` | Testramverket (snabbt, Vite-native) |
+| `@testing-library/react` | `render()`, `screen`, `fireEvent` — verktyg för att rendera och interagera med komponenter |
+| `@testing-library/jest-dom` | Extra assertions som `toBeInTheDocument()` |
+| `jsdom` | Simulerar en webbläsar-DOM i Node.js |
+
+### 8.2 Konfigurera ViTest
+
+Skapa `vitest.config.ts` i projektroten:
+
+```typescript
+import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.ts',
+    include: ['src/**/*.test.{ts,tsx}']
+  }
+})
+```
+
+> **Varför `environment: 'jsdom'`?**
+>
+> React-komponenter använder `document.createElement()`, `window`, och andra webbläsar-API:er. Node.js har inget av detta. Med `jsdom` får ViTest en simulerad DOM som gör att `render(<App />)` faktiskt fungerar.
+>
+> **Varför `include`?**
+>
+> Vi begränsar ViTest till `src/`-mappen. Annars plockar den upp Playwrights genererade testfiler i `.features-gen/` och kraschar.
+
+### 8.3 Skapa setup-fil
+
+Skapa `src/test/setup.ts`:
+
+```typescript
+import { cleanup } from '@testing-library/react'
+import '@testing-library/jest-dom/vitest'
+import { afterEach } from 'vitest'
+
+afterEach(() => {
+  cleanup()
+})
+```
+
+> `cleanup()` rensar DOM:en efter varje test så att tester inte påverkar varandra. Importen av `@testing-library/jest-dom/vitest` ger oss assertions som `toBeInTheDocument()`.
+
+### 8.4 Skriv ett komponenttest
+
+Skapa `src/test/App.test.tsx`:
+
+```tsx
+import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import App from '../App'
+
+describe('App', () => {
+  beforeEach(() => {
+    // Mocka fetch — det finns ingen riktig backend under testning
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      json: async () => ({ message: 'Hello from mock!' })
+    } as Response)
+  })
+
+  it('visar en rubrik', () => {
+    render(<App />)
+    expect(screen.getByText('A message from our backend')).toBeInTheDocument()
+  })
+
+  it('visar meddelandet från API:et', async () => {
+    render(<App />)
+    expect(await screen.findByText('Hello from mock!')).toBeInTheDocument()
+  })
+})
+```
+
+> **Varför mockar vi `fetch`?**
+>
+> Vår `App`-komponent gör `fetch('/api/hello')` i en `useEffect`. Men under testning finns ingen backend — det är därför det är ett *enhetstest*, inte ett integrationstest. Vi använder `vi.spyOn(global, 'fetch')` för att ersätta den riktiga `fetch` med en mockad version som returnerar kontrollerad data.
+>
+> - `screen.getByText()` — hittar ett element via dess text (kastar fel om det inte finns)
+> - `screen.findByText()` — som `getByText` men väntar asynkront (behövs för data som laddas via `useEffect`)
+
+### 8.5 Lägg till npm-script
+
+Lägg till ett `test:vitest`-script i `package.json`:
+
+```json
+"test:vitest": "vitest run"
+```
+
+### 8.6 Kör testerna
+
+```bash
+npm run test:vitest
+```
+
+Du bör se:
+
+```
+ ✓ src/test/App.test.tsx (2 tests) 2 passed
+ 
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+```
+
+> **Tips:** Under utveckling kan du köra `npx vitest` (utan `run`) för watch mode — testerna körs om automatiskt när du sparar en fil.
+
+---
+
+## Reflektion: Playwright eller ViTest — när använder man vad?
+
+Både Playwright och ViTest kan testa att "användaren ser rätt sak på skärmen". Så varför ha båda?
+
+**ViTest + jsdom** kör i Node.js med en *simulerad* DOM. Det är snabbt (millisekunder) men du testar mot en förenkling — jsdom stödjer inte CSS-layout, riktiga nätverksanrop eller webbläsar-specifikt beteende. Allt som komponenten beror på (fetch, router, context) måste du mocka själv.
+
+**Playwright** kör i en *riktig webbläsare* mot hela stacken — frontend, backend, databas. Inget behöver mockas, men varje test tar sekunder istället för millisekunder, och du behöver ha servrarna igång.
+
+| | ViTest + jsdom | Playwright |
+|---|---|---|
+| **Hastighet** | Mycket snabbt (~ms) | Långsammare (~sekunder) |
+| **DOM** | Simulerad (jsdom) | Riktig webbläsare |
+| **Backend** | Mockad | Riktig |
+| **Mockning** | Du måste mocka fetch, router etc. | Inget behöver mockas |
+| **Testar** | En komponent isolerat | Hela flödet som användaren upplever det |
+| **Hittar** | Logikfel i komponenter | Integrationsproblem mellan frontend, backend, databas |
+
+**Ju mer komplicerad webbläsarlogik din komponent använder, desto mer måste du mocka i ViTest.** I vårt enkla exempel behövde vi bara mocka `fetch`. Men en komponent som använder `localStorage`, `IntersectionObserver`, `canvas`, `navigator.geolocation`, drag-and-drop eller animationer kräver allt fler mock-bibliotek och simuleringar — och då börjar man testa sin mock-setup lika mycket som sin komponent. Med Playwright slipper man det helt — allt finns i webbläsaren på riktigt.
+
+**Tumregel:** Använd ViTest för att snabbt verifiera att enskilda komponenter beter sig rätt — speciellt de med enkel webbläsarinteraktion. Använd Playwright för att verifiera att allt fungerar ihop, och för komponenter med komplex webbläsarlogik där mockningsarbetet inte är värt besväret.
+
+De *överlappar* delvis — och det är okej. Det är bättre att ha två tester som fångar samma bugg från olika håll än att ha en blind fläck som ingen testar alls.
