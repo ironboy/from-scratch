@@ -720,7 +720,7 @@ Feature: Smoke-test
 
     Scenario: Startsidan går att öppna
         Given att jag öppnar startsidan
-        Then ska jag se en rubrik på sidan
+        Then ska jag se en rubrik på nivå 1 på sidan
 
     Scenario: API:et svarar via proxyn
         Given att jag öppnar "/api/hello" i webbläsaren
@@ -749,8 +749,8 @@ Given('att jag öppnar {string} i webbläsaren', async ({ page }, path) => {
   await page.goto(path);
 });
 
-Then('ska jag se en rubrik på sidan', async ({ page }) => {
-  const heading = page.locator('h1');
+Then('ska jag se en rubrik på nivå {int} på sidan', async ({ page }, level) => {
+  const heading = page.locator(`h${level}`);
   await expect(heading).toBeVisible();
 });
 
@@ -762,7 +762,9 @@ Then('ska jag se texten {string}', async ({ page }, text) => {
 > **Mönstret:**
 >
 > - `createBdd()` ger oss `Given`, `When`, `Then`-funktioner
-> - Varje step tar emot Playwright-fixtures (t.ex. `page`) och eventuella parametrar från feature-filen (`{string}`)
+> - Varje step tar emot Playwright-fixtures (t.ex. `page`) och eventuella parametrar från feature-filen
+> - **`{string}`** matchar text inom citattecken — `"Hello from .NET!"` → `text`
+> - **`{int}`** matchar ett heltal — `nivå 1` → `level` blir siffran `1`
 > - Vi använder Playwrights inbyggda `expect` för assertions
 
 ### 6.6 Lägg till npm-script
