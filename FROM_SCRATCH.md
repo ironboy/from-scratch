@@ -807,43 +807,11 @@ Du bör se:
 
 ---
 
-## Steg 7: npm-scripts — kör alla tester
-
-Nu har vi alla testtyper på plats. Här är hela `scripts`-sektionen i `package.json`:
-
-```json
-"scripts": {
-  "start": "concurrently -n backend,vite npm:backend npm:dev",
-  "dev": "vite",
-  "backend": "dotnet run --project backend/App",
-  "test": "npm run test:xunit && npm run test:api && npm run test:vitest && npm run test:e2e",
-  "test:xunit": "dotnet test backend/MyApp.slnx",
-  "test:api": "post-they run api-tests",
-  "test:e2e": "npx bddgen && npx playwright test",
-  "test:vitest": "vitest run",
-  "build": "tsc -b && vite build",
-  "lint": "eslint .",
-  "preview": "vite preview"
-}
-```
-
-| Script | Vad det kör | Kräver att servrarna kör? |
-|--------|-------------|--------------------------|
-| `npm run test:xunit` | xUnit enhetstester | Nej |
-| `npm run test:api` | post-they API-tester | Ja — backenden |
-| `npm run test:e2e` | Playwright BDD-tester | Ja — backend + frontend |
-| `npm run test:vitest` | ViTest komponenttester | Nej |
-| `npm test` | Alla ovanstående i sekvens | Ja |
-
-> **Obs:** `npm run test:xunit` och `npm run test:vitest` kan köras utan att starta servrarna — de är rena enhetstester. API- och E2E-tester kräver däremot att backend (och för E2E även frontend) kör. Starta dem med `npm start` i en separat terminal innan du kör `npm test`.
-
----
-
-## Steg 8: Komponenttester med ViTest
+## Steg 7: Komponenttester med ViTest
 
 Nu testar vi React-komponenter. Problemet: våra komponenter renderar till en DOM — men Node.js har ingen DOM. Vi behöver **jsdom**, ett bibliotek som simulerar en webbläsarens DOM i Node.
 
-### 8.1 Installera ViTest och testbibliotek
+### 7.1 Installera ViTest och testbibliotek
 
 ```bash
 npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
@@ -856,7 +824,7 @@ npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
 | `@testing-library/jest-dom` | Extra assertions som `toBeInTheDocument()` |
 | `jsdom` | Simulerar en webbläsar-DOM i Node.js |
 
-### 8.2 Konfigurera ViTest
+### 7.2 Konfigurera ViTest
 
 Skapa `vitest.config.ts` i projektroten:
 
@@ -882,7 +850,7 @@ export default defineConfig({
 >
 > Vi begränsar ViTest till `src/`-mappen. Annars plockar den upp Playwrights genererade testfiler i `.features-gen/` och kraschar.
 
-### 8.3 Skapa setup-fil
+### 7.3 Skapa setup-fil
 
 Skapa `src/test/setup.ts`:
 
@@ -898,7 +866,7 @@ afterEach(() => {
 
 > `cleanup()` rensar DOM:en efter varje test så att tester inte påverkar varandra. Importen av `@testing-library/jest-dom/vitest` ger oss assertions som `toBeInTheDocument()`.
 
-### 8.4 Skriv ett komponenttest
+### 7.4 Skriv ett komponenttest
 
 Skapa `src/test/App.test.tsx`:
 
@@ -934,7 +902,7 @@ describe('App', () => {
 > - `screen.getByText()` — hittar ett element via dess text (kastar fel om det inte finns)
 > - `screen.findByText()` — som `getByText` men väntar asynkront (behövs för data som laddas via `useEffect`)
 
-### 8.5 Lägg till npm-script
+### 7.5 Lägg till npm-script
 
 Lägg till ett `test:vitest`-script i `package.json`:
 
@@ -942,7 +910,7 @@ Lägg till ett `test:vitest`-script i `package.json`:
 "test:vitest": "vitest run"
 ```
 
-### 8.6 Kör testerna
+### 7.6 Kör testerna
 
 ```bash
 npm run test:vitest
@@ -986,32 +954,24 @@ De *överlappar* delvis — och det är okej. Det är bättre att ha två tester
 
 ---
 
-## Kör alla tester
+## Steg 8: Kör alla tester
 
-Nu har vi alla delar på plats. Så här kör du allt:
+Lägg till ett `test`-script i `package.json` som kör alla testtyper i sekvens:
+
+```json
+"test": "npm run test:xunit && npm run test:api && npm run test:vitest && npm run test:e2e"
+```
+
+Starta backend + frontend i en terminal, kör testerna i en annan:
 
 ```bash
-# Terminal 1 — starta backend + frontend
+# Terminal 1
 npm start
 
-# Terminal 2 — kör alla tester
+# Terminal 2
 npm test
 ```
 
-`npm test` (liksom `npm start`) är ett inbyggt npm-script — du behöver inte skriva `run`. Det kör alla testtyper i sekvens:
+`npm test` är (liksom `npm start`) ett inbyggt npm-script — du behöver inte skriva `run`. Om ett steg misslyckas avbryts kedjan (`&&`) så du ser direkt var felet är.
 
-1. **xUnit** — enhetstester mot C#-klasser (kräver inte servrarna)
-2. **post-they** — API-tester mot backenden
-3. **ViTest** — komponenttester med mockad DOM (kräver inte servrarna)
-4. **Playwright** — E2E-tester i riktig webbläsare
-
-Om ett steg misslyckas avbryts kedjan (`&&`) — du ser direkt var felet är.
-
-Du kan även köra varje typ individuellt:
-
-```bash
-npm run test:xunit    # bara C#-enhetstester
-npm run test:api      # bara API-tester
-npm run test:vitest   # bara komponenttester
-npm run test:e2e      # bara E2E-tester
-```
+> **Obs:** `npm run test:xunit` och `npm run test:vitest` kan köras utan att starta servrarna — de är rena enhetstester. API- och E2E-tester kräver att backend (och för E2E även frontend) kör.
