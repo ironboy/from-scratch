@@ -355,3 +355,30 @@ Du bör se:
 Anropet gick till Vite (port 5173) som proxy:ade det vidare till .NET (port 5001). Frontenden och backenden är nu ihopkopplade!
 
 Stoppa servrarna med `Ctrl+C`.
+
+### 3.7 Kontrollera att frontend kan göra en fetch från backend-api:t
+
+Byt ut innehållet i **src/App.tsx** till: 
+
+
+```tsx
+import { useState, useEffect } from 'react'
+
+
+export default function App() {
+
+  const [message,setMessage] = useState('');
+
+  useEffect(()=>{
+    (async ()=>{
+      setMessage((await(await fetch('/api/hello')).json() as any).message);
+    })();
+  });
+
+  return <>
+    <h1>A message from our backend</h1>
+    <p>{message}</p>
+  </>
+
+}
+```
