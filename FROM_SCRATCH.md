@@ -802,7 +802,7 @@ Nu har vi alla testtyper på plats. Här är hela `scripts`-sektionen i `package
 
 ```json
 "scripts": {
-  "start": "concurrently -n backend,vite \"npm run backend\" \"npm run dev\"",
+  "start": "concurrently -n backend,vite \"npm:backend\" \"npm:dev\"",
   "dev": "vite",
   "backend": "dotnet run --project backend/App",
   "test": "npm run test:xunit && npm run test:api && npm run test:vitest && npm run test:e2e",
