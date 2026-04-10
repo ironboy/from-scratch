@@ -371,7 +371,9 @@ export default function App() {
 
   useEffect(()=>{
     (async ()=>{
-      setMessage((await(await fetch('/api/hello')).json() as any).message);
+      const response = await fetch('/api/hello');
+      const data = await response.json();
+      setMessage((data as any).message);
     })();
   }, []);
 
