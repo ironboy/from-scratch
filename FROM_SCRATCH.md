@@ -373,7 +373,7 @@ export default function App() {
     (async ()=>{
       setMessage((await(await fetch('/api/hello')).json() as any).message);
     })();
-  });
+  }, []);
 
   return <>
     <h1>A message from our backend</h1>
