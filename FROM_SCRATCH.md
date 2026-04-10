@@ -301,7 +301,7 @@ npm install -D concurrently
 
 ```json
 "scripts": {
-  "start": "concurrently -n backend,vite \"npm run backend\" \"npm run dev\"",
+  "start": "concurrently -n backend,vite -c yellow,blue \"npm run backend\" \"npm run dev\"", 
   "dev": "vite",
   "backend": "dotnet run --project backend/App",
   "build": "tsc -b && vite build",
@@ -322,7 +322,7 @@ npm install -D concurrently
 >
 > **Vad gör `-n backend,vite`?**
 >
-> Flaggan namnger processerna. I terminalen syns varje rad prefixad med `[backend]` eller `[vite]` så man ser vad som kommer varifrån.
+> Flaggan namnger processerna. I terminalen syns varje rad prefixad med `[backend]` eller `[vite]` så man ser vad som kommer varifrån. (Vi kan även ge olika färger till namnen som skrivs ut med växeln -c.)
 
 ### 3.6 Testa att allt fungerar
 
