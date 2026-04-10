@@ -99,6 +99,8 @@ Vi använder `.` (punkt) för att säga "skapa det *här*, i mappen jag redan st
 > - `.` — skapa i nuvarande mapp (istället för en ny undermapp)
 > - `-- --template react-ts` — hoppa över den interaktiva menyn, välj React + TypeScript direkt
 
+Du får fortfarane en fråga "Install with npm and start now?". Du kan svara ja för att få till npm-installation av nödvändiga för Vite+React+TS, men sedan stänga ner servern direkt med Ctrl+C.
+
 ### Vad fick vi?
 
 ```
