@@ -301,7 +301,7 @@ npm install -D concurrently
 
 ```json
 "scripts": {
-  "start": "concurrently -n backend,vite -c yellow,blue \"npm run backend\" \"npm run dev\"", 
+  "start": "concurrently -n backend,vite -c yellow,blue \"npm:backend\" \"npm:dev\"", 
   "dev": "vite",
   "backend": "dotnet run --project backend/App",
   "build": "tsc -b && vite build",
